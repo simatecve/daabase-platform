@@ -1,0 +1,19 @@
+{$DASHBOARD_DOMAIN:localhost} {
+  reverse_proxy www:3000
+}
+
+{$BACKEND_DOMAIN:api.localhost} {
+  reverse_proxy server:8888
+}
+
+{$STORAGE_DOMAIN:files.localhost} {
+  reverse_proxy minio:9000
+}
+
+{$ADMIN_DOMAIN:admin.localhost} {
+  reverse_proxy admin:3000
+}
+
+{$POSTHOG_DOMAIN:posthog.localhost} {
+  reverse_proxy posthog:8000
+}

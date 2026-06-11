@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+dist/
+.turbo/
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes (no commitear datos)
+postgres_data/
+minio_data/
+caddy_data/
+caddy_config/
+server_config/
+posthog_db/
+posthog_redis/
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+*.tsbuildinfoinstant/

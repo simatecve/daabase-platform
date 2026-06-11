@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: ghcr.io/instantdb/postgresql:postgresql-16-pg-hint-plan
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: pass
+      POSTGRES_USER: daabase
+      POSTGRES_DB: daabase
+    volumes:
+      - postgres_dev:/var/lib/postgresql/data
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U daabase"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_replication_slots=4"
+      - "-c"
+      - "max_wal_senders=4"
+      - "-c"
+      - "shared_preload_libraries=pg_hint_plan"
+      - "-c"
+      - "random_page_cost=1.1"
+
+  server:
+    build:
+      context: ./instant/server
+      dockerfile: Dockerfile-dev
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: "postgresql://daabase:pass@postgres:5432/daabase"
+      NREPL_BIND_ADDRESS: "0.0.0.0"
+      WAL_HISTORY_STORAGE: "pg"
+    volumes:
+      - ./instant:/app
+    ports:
+      - "8888:8888"
+      - "6005:6005"
+    networks:
+      - app
+
+  www:
+    build:
+      context: ./instant/client
+      dockerfile: Dockerfile.www
+    depends_on:
+      - server
+    environment:
+      INSTANT_BACKEND_URL: "http://localhost:8888"
+      NEXT_PUBLIC_LOCAL_SERVER_PORT: "8888"
+    volumes:
+      - ./instant/client:/app
+    ports:
+      - "3000:3000"
+    networks:
+      - app
+
+networks:
+  app:
+    driver: bridge
+
+volumes:
+  postgres_dev:

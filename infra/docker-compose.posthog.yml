@@ -1,0 +1,44 @@
+services:
+  posthog:
+    image: posthog/posthog:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      PH_POSTGRES_HOST: posthog-db
+      PH_POSTGRES_USER: posthog
+      PH_POSTGRES_PASSWORD: posthog
+      PH_POSTGRES_DB: posthog
+      PH_REDIS_HOST: posthog-redis
+      PH_SITE_URL: https://posthog.daabase.click
+      DISABLE_SECURE_SSL_REDIRECT: "true"
+      SECRET_KEY: ${POSTHOG_SECRET_KEY:-pleasechange123}
+    depends_on:
+      posthog-db:
+        condition: service_healthy
+      posthog-redis:
+        condition: service_healthy
+
+  posthog-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: posthog
+      POSTGRES_PASSWORD: posthog
+      POSTGRES_DB: posthog
+    volumes:
+      - posthog_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U posthog"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  posthog-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - posthog_redis:/data
+
+volumes:
+  posthog_db:
+  posthog_redis:

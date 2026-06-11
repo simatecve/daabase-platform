@@ -1,0 +1,4 @@
+[submodule "instant"]
+	path = instant
+	url = https://github.com/simatecve/daabase2.git
+	branch = main

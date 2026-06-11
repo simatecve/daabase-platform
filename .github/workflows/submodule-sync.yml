@@ -1,0 +1,35 @@
+name: Submodule Sync
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Update submodule
+        run: |
+          git submodule update --remote instant
+          cd instant && git log -1 --oneline
+
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add instant
+          git diff --staged --quiet && echo "No changes" && exit 0
+          git commit -m "chore: sync instant submodule"
+          git push
+          hub pr create -b main -h chore/sync-submodule -m "Sync instant submodule" --no-edit || true

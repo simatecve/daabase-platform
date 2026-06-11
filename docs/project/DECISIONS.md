@@ -1,0 +1,18 @@
+# DECISIONS
+- Mantener núcleo upstream durante el MVP.
+- Landing en Netlify y plataforma en VPS propio con Caddy + Docker.
+- PayPhone detrás de una abstracción de proveedor (`billing/provider.clj`).
+- Tres repositorios: `daabase2` (fork), `daabase-landing` (Next.js), `daabase-platform` (control + infra).
+- `daabase-platform` consume `daabase2` como submódulo en `instant/`.
+- `AGENTS.md` y `docs/project/` viven solo en `daabase-platform`.
+- Datos SaaS en schema `saas` del mismo Postgres.
+- Auth admin: magic code con columna `is_admin` en tabla `app_user`.
+- DNS: cinco registros `A` separados, Caddy HTTP-01.
+- Remitentes Resend: `hola@`, `verify@`, `teams@`, `billing@` bajo `daabase.click`.
+- Waitlist: tabla `saas.waitlist`, endpoint `POST /api/waitlist`.
+- Secretos: `.env.example` por repo, valores reales en GitHub Secrets.
+- PayPhone: `billing/provider.clj` con `stub.clj` para dev y `payphone.clj` para sandbox.
+- Email: `email/sender.clj` con `stdout.clj` para dev y `resend.clj` para prod.
+- Backups: `pg_dump` diario, retención 7 días, copia cifrada a S3-compatible, restore drill semanal.
+- Paquetes npm: `@instantdb/*` se mantienen (SaaS privado).
+- Atribución Apache 2.0 visible en `daabase.click/atribucion` y footer del dashboard.

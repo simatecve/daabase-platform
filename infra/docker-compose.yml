@@ -1,0 +1,140 @@
+services:
+  postgres:
+    image: ghcr.io/instantdb/postgresql:postgresql-16-pg-hint-plan
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pass}
+      POSTGRES_USER: ${POSTGRES_USER:-daabase}
+      POSTGRES_DB: ${POSTGRES_DB:-daabase}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-daabase}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_replication_slots=10"
+      - "-c"
+      - "max_wal_senders=10"
+      - "-c"
+      - "shared_preload_libraries=pg_hint_plan"
+      - "-c"
+      - "random_page_cost=1.1"
+
+  minio:
+    image: minio/minio:latest
+    restart: always
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BROWSER: "on"
+      MINIO_SKIP_CLIENT_CERT_VALIDATION: "on"
+    command: server /data --console-address ":9001" --address ":9000"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  createbuckets:
+    image: minio/mc
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-daabase-bucket}
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
+      /usr/bin/mc mb --ignore-existing local/$$S3_BUCKET;
+      exit"
+
+  server:
+    image: ghcr.io/simatecve/daabase2-server:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully
+    environment:
+      WAL_HISTORY_STORAGE: pg
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-daabase}:${POSTGRES_PASSWORD:-pass}@postgres:5432/${POSTGRES_DB:-daabase}?sslmode=disable"
+      INSTANT_BACKEND_URL: ${INSTANT_BACKEND_URL:-https://api.daabase.click}
+      INSTANT_DASHBOARD_URL: ${INSTANT_DASHBOARD_URL:-https://dash.daabase.click}
+      STRIPE_API_KEY: ${STRIPE_API_KEY:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      INSTANT_EMAIL_REPLY_TO: ${INSTANT_EMAIL_REPLY_TO:-teams@daabase.click}
+      INSTANT_DASHBOARD_EMAIL_SENDER_NAME: daabase
+      INSTANT_DASHBOARD_EMAIL_SENDER_EMAIL: ${RESEND_FROM_VERIFY:-verify@daabase.click}
+      INSTANT_APP_EMAIL_SENDER_NAME: daabase
+      INSTANT_APP_EMAIL_SENDER_EMAIL: ${RESEND_FROM_VERIFY:-verify@daabase.click}
+      INSTANT_TEAM_EMAIL_SENDER_NAME: daabase
+      INSTANT_TEAM_EMAIL_SENDER_EMAIL: ${RESEND_FROM_TEAMS:-teams@daabase.click}
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-}
+      S3_BUCKET: ${S3_BUCKET:-daabase-bucket}
+      BILLING_PROVIDER: ${BILLING_PROVIDER:-stub}
+      PAYPHONE_TOKEN: ${PAYPHONE_TOKEN:-}
+      PAYPHONE_STORE_ID: ${PAYPHONE_STORE_ID:-}
+      PAYPHONE_BASE_URL: ${PAYPHONE_BASE_URL:-}
+    volumes:
+      - server_config:/app/resources/config
+
+  www:
+    image: ghcr.io/simatecve/daabase2-dashboard:latest
+    depends_on:
+      - server
+    environment:
+      INSTANT_BACKEND_URL: ${INSTANT_BACKEND_URL:-https://api.daabase.click}
+      NEXT_PUBLIC_SELF_HOSTED: "true"
+    ports:
+      - "3000:3000"
+
+  admin:
+    image: ghcr.io/simatecve/daabase-platform-admin:latest
+    environment:
+      INSTANT_BACKEND_URL: ${INSTANT_BACKEND_URL:-https://api.daabase.click}
+      NEXT_PUBLIC_SELF_HOSTED: "true"
+    ports:
+      - "3001:3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - www
+      - server
+      - admin
+      - minio
+    environment:
+      DASHBOARD_DOMAIN: ${DASHBOARD_DOMAIN:-dash.daabase.click}
+      BACKEND_DOMAIN: ${BACKEND_DOMAIN:-api.daabase.click}
+      STORAGE_DOMAIN: ${STORAGE_DOMAIN:-files.daabase.click}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:-admin.daabase.click}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  postgres_data:
+  minio_data:
+  caddy_data:
+  caddy_config:
+  server_config:
