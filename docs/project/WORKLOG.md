@@ -1,33 +1,39 @@
 # WORKLOG
 
-## 2026-06-11 — Fase 0
+## 2026-06-11 — Fase 1 (inicio, bloqueado)
 
 **Objetivo**
-Completar auditoría upstream y bootstrap de repos para el miniSaaS `daabase`.
+Validar el setup local del fork con docker-compose dev.
 
 **Rama**
-`chore/phase-00-audit` en `daabase2`
+`chore/phase-01-baseline-local` en `daabase-platform`
 
 **Cambios**
-- Remote de `instant/` cambiado de `simatecve/instant` a `simatecve/daabase2`
-- Agregado `upstream` -> `https://github.com/instantdb/instant.git`
-- Estructura de `daabase-platform/` y `daabase-landing/` creada localmente
-- Archivos de control en `docs/project/`
+- Creada rama `chore/phase-01-baseline-local`
+- Creado `docs/project/PHASE_1_ENV_AUDIT.md` con la auditoría del entorno local
+- Actualizado `STATUS.md` (Fase 1 iniciada, bloqueada)
+- Actualizado `RISKS.md` con riesgo "entorno local sin Docker/Java 26"
 
 **Comandos ejecutados**
-- `git remote set-url origin https://github.com/simatecve/daabase2.git`
-- `git remote add upstream https://github.com/instantdb/instant.git`
-- `git push origin main` (Everything up-to-date)
-- `git checkout -b chore/phase-00-audit`
+- `git checkout -b chore/phase-01-baseline-local`
+- `docker --version` (no instalado)
+- `java -version` (v17.0.16 instalado, fork requiere 26)
+- `clojure --version` (no instalado)
+- `pnpm --version` (10.17.1 ✓)
+- `node --version` (v22.14.0 ✓)
 
 **Pruebas**
-No aplica (auditoría READ-ONLY)
+Ninguna. Auditoría del entorno local.
 
 **Resultado**
-Plan aprobado. Fase 0 cerrada.
+Entorno local no soporta el baseline. Falta: Docker, Java 26, Clojure, golang-migrate.
 
 **Riesgos**
-- Token GH sin alcance `repo` para crear repos: crear manualmente en github.com/new
+- Instalación de Docker Desktop requiere reinicio
+- Java 26 (Amazon Corretto 26) es LTS reciente
+- En Windows: `make` y `pg_hint_plan` requieren setup adicional
 
 **Siguiente paso**
-Crear `simatecve/daabase-landing` y `simatecve/daabase-platform` en github.com/new
+1. Decidir: instalar dependencias locales O saltar a Fase 2 (VPS staging)
+2. Si instalar: Docker Desktop + Java 26 + Clojure + golang-migrate
+3. Si saltar: ir a Fase 2 y dejar Fase 1 para entorno CI limpio
