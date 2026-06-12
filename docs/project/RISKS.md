@@ -11,4 +11,5 @@
 | Resend cae | Medio | stdout.clj como fallback |
 | PostHog self-hosted | Medio | VPS aparte, 2-4 GB RAM extra |
 | Apache 2.0 sin atribución | Crítico | Sección atribucion visible |
-| Entorno local sin Docker/Java 26 | Alto | Instalar Docker Desktop + Java 26 antes de Fase 1, o saltar a Fase 2 |
+| Entorno local sin WSL2/Hyper-V | Alto | Requiere admin + reinicio para instalar; alternativa Fase 2 (VPS) |
+| Docker daemon no arranca | Alto | Depende de WSL2/Hyper-V; workaround: VPS staging |
